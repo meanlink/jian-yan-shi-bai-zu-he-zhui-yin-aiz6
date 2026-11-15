@@ -7,7 +7,7 @@ from redis import Redis
 from src.config.database import Session
 from src.config.settings import REDIS_URL
 from src.middlewares.requests import RequestControl
-from src.routes import auth, datasets, jobs, reports
+from src.routes import auth, datasets, jobs, reports, privacy
 from src.controllers import catalog
 from migrations.initial import migrate
 @asynccontextmanager
@@ -18,6 +18,12 @@ async def lifespan(app):
             from scripts.seed_demo import seed
             seed()
         except Exception:logging.exception('Demo seed failed; backend remains available')
+    try:
+        from src.services.privacy import recover_reserved
+        with Session() as db:
+            recover_reserved(db)
+    except Exception:
+        logging.exception('Privacy release recovery failed')
     yield
 app=FastAPI(title='业务分析工作室',lifespan=lifespan)
 app.add_middleware(RequestControl)
@@ -30,4 +36,4 @@ def health():
     with Session() as db:db.execute(text('SELECT 1'))
     r=Redis.from_url(REDIS_URL,socket_timeout=2);r.ping();r.close()
     return {'status':'healthy'}
-for router in [auth.router,datasets.router,jobs.router,reports.router,catalog.router]:app.include_router(router)
+for router in [auth.router,datasets.router,jobs.router,reports.router,privacy.router,catalog.router]:app.include_router(router)

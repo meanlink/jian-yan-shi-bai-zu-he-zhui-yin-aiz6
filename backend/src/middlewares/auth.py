@@ -17,3 +17,10 @@ def can_write(user=Depends(current_user)):
 def admin_only(user=Depends(current_user)):
     if user.role != 'admin': raise HTTPException(403, '需要业务负责人批准')
     return user
+def internal_only(user=Depends(current_user)):
+    """合作方账号只能访问对外发布面，原始数据、内部分析与旧归档一律拒绝。"""
+    if user.role == 'partner':
+        raise HTTPException(403, '合作方仅可访问已发布的差分隐私统计')
+    return user
+def partner_readable(user=Depends(current_user)):
+    return user
